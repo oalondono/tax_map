@@ -68,8 +68,12 @@ block_map = gpd.read_parquet(os.path.join(ROOT_DIR,"data/maps/CA_OC_block_2020.p
 block_map = block_map.set_crs(4269, allow_override=True)
 block_map = block_map.to_crs(parcel_map.crs)
 # %%
-parcel_map_census = parcel_map.sjoin(place_map[['BASENAME', 'geometry']], how='left', predicate='intersects')
-parcel_map_census = parcel_map.sjoin(tract_map[['TRACT', 'geometry']], how='left', predicate='intersects')
-parcel_map_census = parcel_map.sjoin(tract_map[['GEOID', 'BLKGRP', 'geometry']], how='left', predicate='intersects').rename(columns={'GEOID': 'GEOID_BLOCK_GROUP'})
-parcel_map_census = parcel_map.sjoin(tract_map[['GEOID', 'BLOCK' 'geometry']], how='left', predicate='intersects').rename(columns={'GEOID': 'GEOID_BLOCK'})
+parcel_map_census =  parcel_map
+parcel_map_census = parcel_map_census.sjoin(place_map[['BASENAME', 'geometry']], how='left', predicate='intersects').drop(columns=['index_right']).rename(columns={'BASENAME': 'PLACE_NAME'})
+parcel_map_census = parcel_map_census.sjoin(tract_map[['GEOID', 'TRACT', 'geometry']], how='left', predicate='intersects').drop(columns=['index_right']).rename(columns={'GEOID': 'GEOID_TRACT'})
+parcel_map_census = parcel_map_census.sjoin(block_group_map[['GEOID', 'BLKGRP', 'geometry']], how='left', predicate='intersects').rename(columns={'GEOID': 'GEOID_BLOCK_GROUP'}).drop(columns=['index_right'])
+parcel_map_census = parcel_map_census.sjoin(block_map[['GEOID', 'BLOCK', 'geometry']], how='left', predicate='intersects').rename(columns={'GEOID': 'GEOID_BLOCK'}).drop(columns=['index_right'])
 # %%
+parcel_map_census.to_parquet(os.path.join(ROOT_DIR,"data/parcel_tax/CA_OC_parcel_map_census_202508.parquet"), index=False)
+# %%
+# group by boundaries and sum total tax, then get density by area, then merge that onto the census maps
