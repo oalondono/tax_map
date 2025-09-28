@@ -83,9 +83,10 @@ response = requests.get(f"{census_2020_tracts_blocks}/0/query", params=params)
 data = response.json()
 tract_gdf = gpd.GeoDataFrame.from_features(data["features"])
 
+# %%
 response = requests.get(f"{census_2020_tracts_blocks}/1/query", params=params)
 data = response.json()
-block_group_gdf = gpd.GeoDataFrame.from_features(data["features"])
+blkgrp_gdf = gpd.GeoDataFrame.from_features(data["features"])
 
 # %% Get map for all blocks in county, takes a while
 all_blocks_features = []
@@ -112,6 +113,7 @@ block_gdf = gpd.GeoDataFrame.from_features(all_blocks_features)
 county_gdf.to_parquet('/home/ol/Repositories/tax_map/data/maps/CA_OC_county_2020.parquet')
 place_gdf.to_parquet('/home/ol/Repositories/tax_map/data/maps/CA_OC_place_2020.parquet')
 tract_gdf.to_parquet('/home/ol/Repositories/tax_map/data/maps/CA_OC_tract_2020.parquet')
-block_group_gdf.to_parquet('/home/ol/Repositories/tax_map/data/maps/CA_OC_block_group_2020.parquet')
+blkgrp_gdf.to_parquet('/home/ol/Repositories/tax_map/data/maps/CA_OC_blkgrp_2020.parquet')
+# %%
 block_gdf.to_parquet('/home/ol/Repositories/tax_map/data/maps/CA_OC_block_2020.parquet')
 # %%

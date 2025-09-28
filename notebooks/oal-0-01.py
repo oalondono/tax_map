@@ -8,6 +8,15 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from tools.utils import ROOT_DIR
 import os
+import matplotlib.pyplot as plt
+import mapclassify
+import pysal
+import numpy as np
+import seaborn as sns
+
+# %%
+boundary_types = ['place', 'tract', 'blkgrp', 'block']
+agg_cols = ['total_taxable_value', 'property_tax_total_usd', 'special_assessment_total_usd', 'total_tax_usd']
 
 # %%  Extract parcel and tax data from the database
 db_path = os.path.join(ROOT_DIR,"data/parcel_tax/CA_OC_parcel_tax_202508.db")
@@ -52,28 +61,52 @@ parcel_tax['total_tax_usd'] = parcel_tax['property_tax_total_usd'].fillna(0) + p
 parcel_map_path = os.path.join(ROOT_DIR,"data/parcel_tax/CA_OC_parcel_map_202508.parquet")
 parcel_map = gpd.read_parquet(parcel_map_path)
 # %% Read census maps
-place_map = gpd.read_parquet(os.path.join(ROOT_DIR,"data/maps/CA_OC_place_2020.parquet"))
-place_map = place_map.set_crs(4269, allow_override=True)
-place_map = place_map.to_crs(parcel_map.crs)
+land_map = gpd.read_file(os.path.join(ROOT_DIR,"data/ne_10m_land/ne_10m_land.shp")).set_crs(4269, allow_override=True).to_crs(parcel_map.crs)
+# %%
+census_maps = {}
+for boundary in boundary_types:
+	census_maps[boundary] = gpd.read_parquet(os.path.join(ROOT_DIR,f"data/maps/CA_OC_{boundary}_2020.parquet")).set_crs(4269, allow_override=True).to_crs(parcel_map.crs)
 
-tract_map = gpd.read_parquet(os.path.join(ROOT_DIR,"data/maps/CA_OC_tract_2020.parquet"))
-tract_map = tract_map.set_crs(4269, allow_override=True)
-tract_map = tract_map.to_crs(parcel_map.crs)
+census_maps['place'] = gpd.clip(census_maps['place'], land_map)
+census_maps['place'].rename(columns={'BASENAME': 'PLACE'}, inplace=True)
 
-block_group_map = gpd.read_parquet(os.path.join(ROOT_DIR,"data/maps/CA_OC_block_group_2020.parquet"))
-block_group_map = block_group_map.set_crs(4269, allow_override=True)
-block_group_map = block_group_map.to_crs(parcel_map.crs)
-
-block_map = gpd.read_parquet(os.path.join(ROOT_DIR,"data/maps/CA_OC_block_2020.parquet"))
-block_map = block_map.set_crs(4269, allow_override=True)
-block_map = block_map.to_crs(parcel_map.crs)
 # %%
 parcel_map_census =  parcel_map
-parcel_map_census = parcel_map_census.sjoin(place_map[['BASENAME', 'geometry']], how='left', predicate='intersects').drop(columns=['index_right']).rename(columns={'BASENAME': 'PLACE_NAME'})
-parcel_map_census = parcel_map_census.sjoin(tract_map[['GEOID', 'TRACT', 'geometry']], how='left', predicate='intersects').drop(columns=['index_right']).rename(columns={'GEOID': 'GEOID_TRACT'})
-parcel_map_census = parcel_map_census.sjoin(block_group_map[['GEOID', 'BLKGRP', 'geometry']], how='left', predicate='intersects').rename(columns={'GEOID': 'GEOID_BLOCK_GROUP'}).drop(columns=['index_right'])
-parcel_map_census = parcel_map_census.sjoin(block_map[['GEOID', 'BLOCK', 'geometry']], how='left', predicate='intersects').rename(columns={'GEOID': 'GEOID_BLOCK'}).drop(columns=['index_right'])
-# %%
-parcel_map_census.to_parquet(os.path.join(ROOT_DIR,"data/parcel_tax/CA_OC_parcel_map_census_202508.parquet"), index=False)
-# %%
+for boundary in boundary_types:
+	parcel_map_census = parcel_map_census.sjoin(census_maps[f"{boundary}"][['GEOID', boundary.upper(), 'geometry']], how='left', predicate='intersects').drop(columns=['index_right']).rename(columns={'GEOID': f'GEOID_{boundary.upper()}'})
+
 # group by boundaries and sum total tax, then get density by area, then merge that onto the census maps
+parcel_map_census = parcel_map_census.merge(parcel_tax, how='left', left_on='AssessmentNo', right_on='apn')
+# %%
+parcel_map_agg = {}
+for boundary in boundary_types:
+	parcel_map_agg[boundary] = parcel_map_census[[f"GEOID_{boundary.upper()}"] + agg_cols].groupby(by=f"GEOID_{boundary.upper()}").sum()
+	parcel_map_agg[boundary] = parcel_map_agg[boundary].merge(census_maps[boundary], how='left', left_on=f"GEOID_{boundary.upper()}", right_on='GEOID').set_geometry('geometry')
+# %%
+for boundary in boundary_types:
+	parcel_map_agg[boundary]['AREALAND_ACRE'] = parcel_map_agg[boundary]['AREALAND']/(4046.86)  # convert square meters to acres
+	for col in agg_cols:
+		parcel_map_agg[boundary][f'{col}_PER_ACRE'] = parcel_map_agg[boundary][col] / parcel_map_agg[boundary]['AREALAND_ACRE']
+# %%
+for boundary in boundary_types:
+	for col in agg_cols:
+		fig, ax = plt.subplots(figsize=(10, 10))
+		parcel_map_agg[boundary].plot(
+			ax=ax,
+			column=f'{col}_PER_ACRE',
+			scheme='quantiles',
+			k=10,
+			legend=True,
+			legend_kwds={
+				'loc': 'upper left',
+				'bbox_to_anchor': (1.05, 1),
+				'title': f'{col}_per_acre',
+				'fmt': '${:,.0f}'
+			},
+		)
+		parcel_map_agg['place'].boundary.plot(ax=ax, color='white', linewidth=2)
+		plt.title(f'{col} per acre by {boundary}')
+		plt.show()
+
+
+# %%
