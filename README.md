@@ -1,5 +1,5 @@
 # tax_map
-Over 70 American municipalities ([1](https://marroninstitute.nyu.edu/projects/debt-and-urban-poverty) have declared bankruptcy since 2007. A city is motivated to maximize the revenue generated within its borders (property tax, sales tax) in order to meet its financial obligations. 
+Over 70 American municipalities ([1](https://marroninstitute.nyu.edu/projects/debt-and-urban-poverty)) have declared bankruptcy since 2007. A city is motivated to maximize the revenue generated within its borders (property tax, sales tax) in order to meet its financial obligations. Therefore, a city may be interested in knowing which areas generate the most revenue.
 This is an implementation of value per acre maps for Orange County, CA which is intended to help visualize the spatial distribution of property tax revenue. These are similar to those made by [Urban3](https://www.urbanthree.com/) ([example](https://www.strongtowns.org/journal/2018-10-19-value-per-acre-analysis-a-how-to-for-beginners)).  
 
 In these maps, we are normalizing property tax revenue by land area. This makes the implicit assumption for any given acre of land, we can assume similar level of infrastructure investment based on miles of road, pipes, etc. that span near or across the property. 
@@ -27,4 +27,5 @@ Aggregation is done to reduce loading time of the map by minimizing the geograph
 Static maps were generated using geopandas.  
 Interactive maps will also be made so members of the public can more easily identify areas they are familiar with.  
 [...]
+
 
