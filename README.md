@@ -6,6 +6,7 @@ In these maps, we are normalizing property tax revenue by land area. This makes 
 This is likely a reasonable asusmption within municipal/incorporated land boundaries.
 
 The results of this map will highlight areas which provide a large property tax return relative to their size. The type of land use in these exceptional areas may provide insight into the type of developments a city wants to promote.
+<img width="1067" height="772" alt="tax_blkgrp" src="https://github.com/user-attachments/assets/2d40e3a1-3683-44dc-8333-e5b171b814d8" />
 
 ## Data Sources
 
@@ -26,3 +27,4 @@ Aggregation is done to reduce loading time of the map by minimizing the geograph
 Static maps were generated using geopandas.  
 Interactive maps will also be made so members of the public can more easily identify areas they are familiar with.  
 [...]
+
